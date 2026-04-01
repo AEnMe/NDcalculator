@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Long Exposure Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0d0d0d;
+      color: #d4c5a9;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .app { width: 100%; max-width: 520px; }
+
+    /* Header */
+    .eyebrow {
+      color: #c8832a;
+      font-size: 10px;
+      letter-spacing: 4px;
+      margin-bottom: 6px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 400;
+      color: #f0e6d3;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .header-rule {
+      height: 1px;
+      background: linear-gradient(90deg, #c8832a44, transparent);
+      margin-bottom: 32px;
+    }
+
+    /* Sections */
+    section { margin-bottom: 28px; }
+
+    label.section-label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    label.section-label span {
+      color: #555;
+      margin-left: 8px;
+      font-size: 9px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      color: #f0e6d3;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      border-radius: 2px;
+    }
+    input[type="number"] { font-size: 14px; cursor: text; }
+    input[type="number"]::placeholder { color: #444; }
+    .hint { font-size: 10px; color: #555; margin-top: 4px; }
+
+    /* ND grid */
+    .nd-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .nd-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+    .nd-btn {
+      width: 100%;
+      background: #141414;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 8px 4px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .nd-btn.active {
+      background: #c8832a;
+      border-color: #e8a94a;
+      color: #0d0d0d;
+      font-weight: bold;
+    }
+    .nd-btn .ev-label { font-size: 9px; opacity: 0.8; }
+
+    .nd-counter {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+    .nd-counter.visible { display: flex; }
+    .nd-counter-val {
+      color: #f0e6d3;
+      font-size: 12px;
+      min-width: 20px;
+      text-align: center;
+    }
+    .counter-btn {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #c8832a;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      border-radius: 2px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .nd-summary { margin-top: 10px; font-size: 11px; color: #c8832a; line-height: 1.8; }
+    .nd-summary .nd-total { color: #777; }
+
+    /* Divider */
+    .divider { height: 1px; background: #1e1e1e; margin-bottom: 24px; }
+
+    /* Stops bar */
+    .stops-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .stops-label { font-size: 11px; color: #666; }
+    .stops-value { font-size: 14px; color: #c8832a; }
+    .bar-track {
+      height: 6px;
+      background: #1a1a1a;
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid #333;
+      margin-bottom: 4px;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c8832a, #e8a94a);
+      border-radius: 3px;
+      transition: width 0.4s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+    .bar-ticks {
+      display: flex;
+      justify-content: space-between;
+      color: #555;
+      font-size: 10px;
+    }
+
+    /* Result card */
+    .result-card {
+      background: #111;
+      border: 1px solid #c8832a44;
+      padding: 24px;
+      border-radius: 2px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #c8832a88, transparent);
+    }
+    .result-label { font-size: 11px; color: #555; letter-spacing: 2px; margin-bottom: 8px; }
+    .result-time {
+      font-size: 52px;
+      font-weight: bold;
+      color: #f0e6d3;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .result-time.empty { color: #444; }
+    .reciprocity-note { font-size: 11px; color: #888; margin-top: 10px; display: none; }
+    .reciprocity-note .accent { color: #c8832a; margin-left: 8px; }
+    .result-meta {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #1e1e1e;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      font-size: 11px;
+      color: #555;
+    }
+    .result-meta .meta-val { color: #888; }
+
+    .warning {
+      padding: 10px 14px;
+      background: #1a1200;
+      border: 1px solid #c8832a33;
+      border-radius: 2px;
+      font-size: 11px;
+      color: #c8832a;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      font-size: 10px;
+      color: #333;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="eyebrow">◈ LONG EXPOSURE</div>
+  <h1>CALCULATOR</h1>
+  <div class="header-rule"></div>
+
+  <!-- 01 Base shutter -->
+  <section>
+    <label class="section-label">01 — BASE SHUTTER SPEED</label>
+    <select id="baseShutter">
+      <option value="0.000125">1/8000</option>
+      <option value="0.00025">1/4000</option>
+      <option value="0.0005">1/2000</option>
+      <option value="0.001">1/1000</option>
+      <option value="0.002">1/500</option>
+      <option value="0.004">1/250</option>
+      <option value="0.008">1/125</option>
+      <option value="0.01" selected>1/100</option>
+      <option value="0.01667">1/60</option>
+      <option value="0.03333">1/30</option>
+      <option value="0.06667">1/15</option>
+      <option value="0.125">1/8</option>
+      <option value="0.25">1/4</option>
+      <option value="0.5">1/2</option>
+      <option value="1">1"</option>
+      <option value="2">2"</option>
+      <option value="4">4"</option>
+      <option value="8">8"</option>
+      <option value="15">15"</option>
+      <option value="30">30"</option>
+    </select>
+  </section>
+
+  <!-- 02 ND Filters -->
+  <section>
+    <label class="section-label">02 — ND FILTERS<span>TAP TO ADD · STACK WITH +/−</span></label>
+    <div class="nd-grid" id="ndGrid"></div>
+    <div class="nd-summary" id="ndSummary" style="display:none"></div>
+  </section>
+
+  <!-- 03 Manual stops -->
+  <section>
+    <label class="section-label">03 — ADDITIONAL STOPS (optional)</label>
+    <input type="number" id="manualStops" step="0.5" min="0" max="30" placeholder="e.g. 3.5" />
+    <div class="hint">Aperture / ISO adjustments or stops not covered by your filters</div>
+  </section>
+
+  <!-- 04 Reciprocity -->
+  <section>
+    <label class="section-label">04 — FILM RECIPROCITY FAILURE</label>
+    <select id="reciprocity">
+      <option value="none">Off (digital)</option>
+      <option value="hp5">Ilford HP5+</option>
+      <option value="fp4">Ilford FP4+</option>
+      <option value="delta400">Ilford Delta 400</option>
+      <option value="portra">Kodak Portra 400</option>
+      <option value="ektar">Kodak Ektar 100</option>
+    </select>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Result -->
+  <section>
+    <label class="section-label">— RESULT</label>
+
+    <div style="margin-bottom:20px">
+      <div class="stops-header">
+        <span class="stops-label">LIGHT REDUCTION</span>
+        <span class="stops-value" id="stopsValue">0.0 stops</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="bar-ticks">
+        <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-label">TARGET EXPOSURE</div>
+      <div class="result-time empty" id="resultTime">—</div>
+      <div class="reciprocity-note" id="reciprocityNote">
+        Calculated: <span id="calcTime"></span>
+        <span class="accent" id="deltaTime"></span>
+      </div>
+      <div class="result-meta">
+        <div><div>BASE</div><div class="meta-val" id="metaBase">1/100s</div></div>
+        <div><div>ND STOPS</div><div class="meta-val" id="metaNDStops">0.0</div></div>
+        <div><div>ND FACTOR</div><div class="meta-val" id="metaFactor">×1</div></div>
+      </div>
+    </div>
+
+    <div class="warning" id="warning">
+      <span>⚠</span><span id="warningText"></span>
+    </div>
+  </section>
+
+  <div class="footer">LONG EXPOSURE CALCULATOR</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ─── DATA ──────────────────────────────────────────────────────────────────
+
+  const ND_FILTERS = [
+    { label: "ND2",    stops: 1   },
+    { label: "ND4",    stops: 2   },
+    { label: "ND8",    stops: 3   },
+    { label: "ND16",   stops: 4   },
+    { label: "ND32",   stops: 5   },
+    { label: "ND64",   stops: 6   },
+    { label: "ND400",  stops: 8.6 },
+    { label: "ND1000", stops: 10  },
+    { label: "ND4000", stops: 12  },
+    { label: "ND6400", stops: 13  },
+  ];
+
+  const RECIPROCITY = {
+    none:     t => t,
+    hp5:      t => t < 1 ? t : Math.pow(t, 1.31),
+    fp4:      t => t < 1 ? t : Math.pow(t, 1.26),
+    delta400: t => t < 1 ? t : Math.pow(t, 1.41),
+    portra:   t => t < 1 ? t : t * Math.pow(t, 0.35),
+    ektar:    t => t < 1 ? t : t * Math.pow(t, 0.40),
+  };
+
+  // filterCounts: { [stops]: count }
+  const filterCounts = {};
+
+  // ─── HELPERS ───────────────────────────────────────────────────────────────
+
+  function formatTime(s) {
+    if (s < 1) return `1/${Math.round(1 / s)}s`;
+    if (s < 60) return `${s.toFixed(1)}s`;
+    if (s < 3600) {
+      const m = Math.floor(s / 60), r = Math.round(s % 60);
+      return r > 0 ? `${m}m ${r}s` : `${m}m`;
+    }
+    const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  function totalNDStops() {
+    return Object.entries(filterCounts).reduce(
+      (sum, [stops, count]) => sum + parseFloat(stops) * count, 0
+    );
+  }
+
+  // ─── BUILD ND GRID ─────────────────────────────────────────────────────────
+
+  const grid = document.getElementById('ndGrid');
+
+  ND_FILTERS.forEach(nd => {
+    const cell = document.createElement('div');
+    cell.className = 'nd-cell';
+    cell.innerHTML = `
+      <button class="nd-btn" data-stops="${nd.stops}">
+        <span>${nd.label}</span>
+        <span class="ev-label">${nd.stops}ev</span>
+      </button>
+      <div class="nd-counter" data-stops="${nd.stops}">
+        <button class="counter-btn dec" data-stops="${nd.stops}">−</button>
+        <span class="nd-counter-val" data-stops="${nd.stops}">×1</span>
+        <button class="counter-btn inc" data-stops="${nd.stops}">+</button>
+      </div>
+    `;
+    grid.appendChild(cell);
+  });
+
+  // ─── EVENT HANDLERS ────────────────────────────────────────────────────────
+
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.nd-btn');
+    const inc = e.target.closest('.counter-btn.inc');
+    const dec = e.target.closest('.counter-btn.dec');
+
+    if (btn) {
+      const stops = btn.dataset.stops;
+      filterCounts[stops] = (filterCounts[stops] || 0) + 1;
+      updateND(stops);
+      recalc();
+    }
+    if (inc) {
+      const stops = inc.dataset.stops;
+      filterCounts[stops] = (filterCounts[stops] || 0) + 1;
+      updateND(stops);
+      recalc();
+    }
+    if (dec) {
+      const stops = dec.dataset.stops;
+      if ((filterCounts[stops] || 0) <= 1) delete filterCounts[stops];
+      else filterCounts[stops]--;
+      updateND(stops);
+      recalc();
+    }
+  });
+
+  document.getElementById('baseShutter').addEventListener('change', recalc);
+  document.getElementById('manualStops').addEventListener('input', recalc);
+  document.getElementById('reciprocity').addEventListener('change', recalc);
+
+  function updateND(stops) {
+    const count = filterCounts[stops] || 0;
+    const btn = grid.querySelector(`.nd-btn[data-stops="${stops}"]`);
+    const counter = grid.querySelector(`.nd-counter[data-stops="${stops}"]`);
+    const val = grid.querySelector(`.nd-counter-val[data-stops="${stops}"]`);
+
+    btn.classList.toggle('active', count > 0);
+    counter.classList.toggle('visible', count > 0);
+    if (val) val.textContent = `×${count}`;
+  }
+
+  // ─── RECALC ────────────────────────────────────────────────────────────────
+
+  function recalc() {
+    const baseShutter  = parseFloat(document.getElementById('baseShutter').value);
+    const manualNum    = parseFloat(document.getElementById('manualStops').value) || 0;
+    const recipKey     = document.getElementById('reciprocity').value;
+
+    const ndStops    = totalNDStops();
+    const allStops   = ndStops + manualNum;
+    const rawResult  = baseShutter * Math.pow(2, allStops);
+    const finalResult = RECIPROCITY[recipKey](rawResult);
+    const delta      = finalResult - rawResult;
+
+    // Stops bar
+    document.getElementById('stopsValue').textContent = `${allStops.toFixed(1)} stops`;
+    document.getElementById('barFill').style.width = `${Math.min(100, (allStops / 20) * 100)}%`;
+
+    // Result time
+    const timeEl = document.getElementById('resultTime');
+    if (allStops === 0) {
+      timeEl.textContent = '—';
+      timeEl.classList.add('empty');
+    } else {
+      timeEl.textContent = formatTime(finalResult);
+      timeEl.classList.remove('empty');
+    }
+
+    // Reciprocity note
+    const noteEl = document.getElementById('reciprocityNote');
+    if (recipKey !== 'none' && Math.abs(delta) > 0.5 && allStops > 0) {
+      document.getElementById('calcTime').textContent = formatTime(rawResult);
+      document.getElementById('deltaTime').textContent = `+${formatTime(delta)} (reciprocity)`;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    // Meta
+    const baseLabel = document.getElementById('baseShutter').selectedOptions[0].text;
+    document.getElementById('metaBase').textContent = baseLabel;
+    document.getElementById('metaNDStops').textContent = ndStops.toFixed(1);
+    document.getElementById('metaFactor').textContent = `×${Math.round(Math.pow(2, allStops))}`;
+
+    // ND summary
+    const summaryEl = document.getElementById('ndSummary');
+    const active = ND_FILTERS.filter(nd => (filterCounts[nd.stops] || 0) > 0);
+    if (active.length > 0) {
+      const parts = active.map(nd => {
+        const c = filterCounts[nd.stops];
+        return `<span style="margin-right:10px">${c > 1 ? `${nd.label} ×${c}` : nd.label} (${(nd.stops * c).toFixed(1)} ev)</span>`;
+      });
+      parts.push(`<span class="nd-total">= ${ndStops.toFixed(1)} ev total</span>`);
+      summaryEl.innerHTML = parts.join('');
+      summaryEl.style.display = 'block';
+    } else {
+      summaryEl.style.display = 'none';
+    }
+
+    // Warning
+    const warnEl = document.getElementById('warning');
+    if (finalResult >= 60 && allStops > 0) {
+      document.getElementById('warningText').textContent = finalResult >= 3600
+        ? 'Exposure > 1h — check battery level and tripod stability.'
+        : 'Long exposure — use a remote shutter release and mirror lockup (BULB mode).';
+      warnEl.style.display = 'flex';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+
+  recalc();
+}); // DOMContentLoaded
+</script>
+</body>
+</html>
